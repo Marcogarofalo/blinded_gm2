@@ -207,7 +207,18 @@ int main(int argc, char** argv) {
     double**** conf_jack = myres->create(Neff, head.ncorr, head.T, data_bin);
     free_corr(Neff, head.ncorr, head.T, data_bin);
     free_corr(confs, head.ncorr, head.T, data);
-    exit(1);
+    //////////////////////////////////////////////////////////////
+    // read a,ZA,ZV
+    //////////////////////////////////////////////////////////////
+    double mean, error;
+    line_read_param(option, "a", mean, err, seed, namefile_plateaux);
+    double* a_fm = myres->create_fake(mean, err, seed);
+    double* a_MeV = myres->create_copy(a_fm);
+    myres->div(a_MeV, a_fm, hbarc);
+    line_read_param(option, "ZA", mean, err, seed, namefile_plateaux);
+    double* ZA = myres->create_fake(mean, err, seed);
+    line_read_param(option, "ZV", mean, err, seed, namefile_plateaux);
+    double* ZV = myres->create_fake(mean, err, seed);
 
     /////////////////////////////////////////////////////////////////////////////////////////////////////////
     // print all the effective masses correlators
