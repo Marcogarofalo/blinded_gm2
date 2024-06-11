@@ -70,3 +70,5 @@ eigen/
 Eigen/
 EIGEN3/
 gsl*
+
+data/

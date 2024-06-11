@@ -19,6 +19,9 @@
 
 #include "correlators_analysis.hpp"
 #include "functions_blinded_gm2.hpp"
+
+#include "functions_amu.hpp"
+
 struct kinematic kinematic_2pt;
 
 generic_header read_head(FILE* stream) {
@@ -35,7 +38,13 @@ generic_header read_head(FILE* stream) {
     std::cout << "Nsubs: " << Nsubs << std::endl;
     error(i == 6, 1, "read_head", " counter %d, different from 6");
 
+    int here = ftell(stream);
+    fseek(stream, 0, SEEK_END);
+    int size = ftell(stream);
+    printf("Nconfs found: %ld\n", (size - here) / ((TT / 2 + 1) * sizeof(double)));
+    fseek(stream, here, SEEK_SET);
     header.Nconf = Nconfs * Nsubs;
+    error(header.Nconf != (size - here) / ((TT / 2 + 1) * sizeof(double)), 1, "read_head", "Nconf not match size file ");
     header.Njack = Nconfs;
     header.T = TT;
     header.L = TT / 2;
@@ -115,25 +124,37 @@ void init_global_head(generic_header head) {
     }
 }
 
-void read_twopt(FILE* stream, double*** to_write, generic_header head, int TMOS) {
+void read_twopt(FILE* stream, double*** to_write, generic_header head, int TMOS, int Nsub) {
     // write your function to read the data
     int fi = 0;
-
-    for (int k = 0; k < head.Nconf / head.Njack; k++) {
-        for (int t = 0; t < head.T / 2 + 1;t++) {
+    // printf("aaaaaaaaaaaaaaaaa %d %d %d\n", head.Nconf / head.Njack, head.Nconf, head.Njack);
+    for (int t = 0; t < head.T / 2 + 1;t++) {
+        for (int k = 0; k < Nsub; k++) {
             double a, b;
-            fi += fscanf(stream, "%lf  %lf", &a, &b);
+            // fi += fscanf(stream, "%lf  %lf", &a, &b);
+            fi += fread(&a, sizeof(double), 1, stream);
             to_write[TMOS][t][0] += a;
-            to_write[TMOS][t][1] += b;
+            // to_write[TMOS][t][1] += 0;
+            // printf("%g\n", to_write[TMOS][t][0]);
         }
+        to_write[TMOS][t][0] /= (double)Nsub;
+        // to_write[TMOS][t][1] /= (double)Nsub;
     }
-
+    error(fi != Nsub * (head.T / 2 + 1), 1, "bin_intoN", "invalid counter %d ", fi);
+    for (int t = 1; t < head.T / 2 + 1;t++) {
+        to_write[TMOS][head.T - t][0] /= to_write[TMOS][t][0];
+        // to_write[TMOS][head.T - t][1] /= to_write[TMOS][t][1];
+    }
 }
 
 int main(int argc, char** argv) {
     error(argc != 8, 1, "nissa_mpcac ",
-        "usage:./nissa_mpcac -p path file -bin $bin  jack/boot  mu\n separate "
-        "path and file please");
+        "usage:./nissa_mpcac -p path file -bin $bin  jack/boot  mu\n "
+        "separate path and file please");
+
+    char resampling[NAMESIZE];
+    mysprintf(resampling, NAMESIZE, argv[6]);
+    printf("resampling: %s\n", resampling);
 
     char** option = argv_to_options(argv);
 
@@ -150,6 +171,17 @@ int main(int argc, char** argv) {
     FILE* infile_OS = open_file(namefile, "r");
     //////////////////////////////////// read and setup header
     generic_header head = read_head(infile);
+    int Nconf, Nsub, Nskip;
+    if (strcmp(option[6], "C80") == 0) {
+        Nconf = head.Nconf - 218;
+        Nsub = head.Nconf / head.Njack;
+        Nskip = 218;
+        head.Njack -= 218;
+    }
+    else {
+        Nconf = head.Nconf;
+        Nsub = head.Nconf / head.Njack;
+    }
     head.print_header();
     head.mus.resize(1);
     head.mus[0] = std::atof(argv[7]);
@@ -161,7 +193,8 @@ int main(int argc, char** argv) {
     //////////////////////////////////// setup jackboot and binning
     int confs = head.Njack;
     int bin = atoi(argv[5]);
-    int Neff = confs / bin;
+    int Neff = bin;
+    error(bin < 10, 1, "main", "we are binning into Nbin, set a number >10");
     int Njack;
     if (strcmp(argv[6], "jack") == 0) {
         Njack = Neff + 1;
@@ -192,25 +225,38 @@ int main(int argc, char** argv) {
     head.ncorr = 2;
     //////////////////////////////////// confs
     double**** data = calloc_corr(confs, head.ncorr, head.T);
+    double**** data_1 = calloc_corr(218, head.ncorr, head.T);
+    double**** data_bin_1;
+    double**** conf_jack_1;
 
     printf("confs=%d\n", confs);
     printf("ncorr=%d\n", head.ncorr);
     printf("kappa=%g\n", head.kappa);
-    for (int iconf = 0; iconf < confs; iconf++) {
-        read_twopt(infile, data[iconf], head, 0);
+    if (strcmp(option[6], "C80") == 0) {
+        for (int iconf = 0; iconf < 218; iconf++) {
+            read_twopt(infile, data_1[iconf], head, 0, Nsub);
+            read_twopt(infile_OS, data_1[iconf], head, 1, Nsub);
+        }
+        data_bin_1 = bin_intoN(data_1, head.ncorr, head.T, 218, bin);
+        // (confs, head.ncorr, head.T, data, bin);
+        free_corr(confs, head.ncorr, head.T, data_1);
+        conf_jack_1 = myres->create(Neff, head.ncorr, head.T, data_bin_1);
+        free_corr(Neff, head.ncorr, head.T, data_bin_1);
     }
     for (int iconf = 0; iconf < confs; iconf++) {
-        read_twopt(infile, data[iconf], head, 1);
+        read_twopt(infile, data[iconf], head, 0, Nsub);
+        read_twopt(infile_OS, data[iconf], head, 1, Nsub);
     }
 
-    double**** data_bin = binning(confs, head.ncorr, head.T, data, bin);
+    double**** data_bin = bin_intoN(data, head.ncorr, head.T, confs, bin);//binning(confs, head.ncorr, head.T, data, bin);
+    free_corr(confs, head.ncorr, head.T, data);
     double**** conf_jack = myres->create(Neff, head.ncorr, head.T, data_bin);
     free_corr(Neff, head.ncorr, head.T, data_bin);
-    free_corr(confs, head.ncorr, head.T, data);
     //////////////////////////////////////////////////////////////
     // read a,ZA,ZV
     //////////////////////////////////////////////////////////////
-    double mean, error;
+    double mean, err;
+    int seed;
     line_read_param(option, "a", mean, err, seed, namefile_plateaux);
     double* a_fm = myres->create_fake(mean, err, seed);
     double* a_MeV = myres->create_copy(a_fm);
@@ -219,6 +265,9 @@ int main(int argc, char** argv) {
     double* ZA = myres->create_fake(mean, err, seed);
     line_read_param(option, "ZV", mean, err, seed, namefile_plateaux);
     double* ZV = myres->create_fake(mean, err, seed);
+    line_read_param(option, "Mpi", mean, err, seed, namefile_plateaux);
+    double* Mpi = myres->create_fake(mean, err, seed);
+
 
     /////////////////////////////////////////////////////////////////////////////////////////////////////////
     // print all the effective masses correlators
@@ -302,34 +351,55 @@ int main(int argc, char** argv) {
     // start fitting
     //////////////////////////////
     corr_counter = -1;
-    double* M_PS = plateau_correlator_function(
-        option, kinematic_2pt, (char*)"P5P5", conf_jack, Njack,
-        namefile_plateaux, outfile, 0, "M_{PS}", M_eff_T, jack_file);
-    free(M_PS);
-    check_correlatro_counter(0);
+    constexpr double q2ud = 5.0 / 9.0;
+    double (*int_scheme)(int, int, double*);
+    int_scheme = integrate_simpson38;
+    int isub = -2;
+    int ibound =2;
+    double* amu_TM = compute_amu_full(conf_jack, 0, Njack, ZA, a_fm, q2ud, int_scheme, outfile, "amu_{full}_(TM)", resampling, isub);
+    printf("amu_TM = %g  %g \n", amu_TM[Njack - 1], myres->comp_error(amu_TM));
+    double* amu_OS = compute_amu_full(conf_jack, 1, Njack, ZV, a_fm, q2ud, int_scheme, outfile, "amu_{full}_(OS)", resampling, isub);
+    printf("amu_OS = %g  %g \n", amu_OS[Njack - 1], myres->comp_error(amu_OS));
 
-    // eg of fit to correlator
-    struct fit_type fit_info;
-    struct fit_result fit_out;
 
-    fit_info.Nvar = 1;
-    fit_info.Npar = 1;
-    fit_info.N = 1;
-    fit_info.Njack = Njack;
-    fit_info.n_ext_P = 0;
-    // fit_info.ext_P = (double**)malloc(sizeof(double*) * fit_info.n_ext_P);
-    // fit_info.ext_P[0] = something;
-    fit_info.function = constant_fit;
-    fit_info.linear_fit = true;
-    fit_info.T = head.T;
-    fit_info.corr_id = {};
+    double* amu_TM_bound = compute_amu_bounding(conf_jack, 0, Njack, ZA, a_fm, q2ud, int_scheme, outfile, "amu_{bound}_(TM)",
+        resampling, isub, ibound, Mpi, nullptr, head.L);
+    printf("amu_TM(bound) = %g  %g \n", amu_TM_bound[Njack - 1], myres->comp_error(amu_TM_bound));
 
-    // c++ 0 || r 1
-    struct fit_result fit_me_P5P5 = fit_fun_to_fun_of_corr(
-        option, kinematic_2pt, (char*)"P5P5", conf_jack, namefile_plateaux,
-        outfile, lhs_function_blinded_gm2_eg, "give_name", fit_info,
-        jack_file);
-    check_correlatro_counter(1);
-    // free_fit_result(fit_info, fit_out);
-    fit_info.restore_default();
+    double* amu_OS_bound = compute_amu_bounding(conf_jack, 1, Njack, ZV, a_fm, q2ud, int_scheme, outfile, "amu_{bound}_(OS)",
+        resampling, isub, ibound, Mpi, nullptr, head.L);
+    printf("amu_OS(bound) = %g  %g \n", amu_OS_bound[Njack - 1], myres->comp_error(amu_OS_bound));
+    
+    // double* amu_OS_bound = compute_amu_full(conf_jack, 1, Njack, ZV, a_fm, q2ud, int_scheme, outfile, "amu_{full}_(OS)", resampling, isub);
+
+    // double* M_PS = plateau_correlator_function(
+    //     option, kinematic_2pt, (char*)"P5P5", conf_jack, Njack,
+    //     namefile_plateaux, outfile, 0, "M_{PS}", M_eff_T, jack_file);
+    // free(M_PS);
+    // check_correlatro_counter(0);
+
+    // // eg of fit to correlator
+    // struct fit_type fit_info;
+    // struct fit_result fit_out;
+
+    // fit_info.Nvar = 1;
+    // fit_info.Npar = 1;
+    // fit_info.N = 1;
+    // fit_info.Njack = Njack;
+    // fit_info.n_ext_P = 0;
+    // // fit_info.ext_P = (double**)malloc(sizeof(double*) * fit_info.n_ext_P);
+    // // fit_info.ext_P[0] = something;
+    // fit_info.function = constant_fit;
+    // fit_info.linear_fit = true;
+    // fit_info.T = head.T;
+    // fit_info.corr_id = {};
+
+    // // c++ 0 || r 1
+    // struct fit_result fit_me_P5P5 = fit_fun_to_fun_of_corr(
+    //     option, kinematic_2pt, (char*)"P5P5", conf_jack, namefile_plateaux,
+    //     outfile, lhs_function_blinded_gm2_eg, "give_name", fit_info,
+    //     jack_file);
+    // check_correlatro_counter(1);
+    // // free_fit_result(fit_info, fit_out);
+    // fit_info.restore_default();
 }
