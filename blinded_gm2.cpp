@@ -63,7 +63,7 @@ void check_head(generic_header header, FILE* stream) {
     std::cout << "TT: " << TT << " " << TT / 2 + 1 << std::endl;
     std::cout << "Nhits: " << Nhits << std::endl;
     std::cout << "Nsubs: " << Nsubs << std::endl;
-    error(header.Nconf != Nconfs * Nsubs, 1, "check_head", " Nconf does not match read %d stored %ld", Nconfs, header.Nconf);
+    error(header.Nconf != Nconfs * Nsubs, 1, "check_head", " Nconf * Nsub does not match read %d stored %ld", Nconfs, header.Nconf);
     error(header.T != TT, 1, "check_head", " T does not match read %d stored %ld", TT, header.T);
     error(header.Njack != Nconfs, 1, "check_head", " Nconf does not match read %d stored %d", Nconfs / Nsubs, header.Njack);
     error(i == 6, 1, "read_head", " counter %d, different from 6");
@@ -171,6 +171,7 @@ int main(int argc, char** argv) {
     FILE* infile_OS = open_file(namefile, "r");
     //////////////////////////////////// read and setup header
     generic_header head = read_head(infile);
+    check_head(head, infile_OS);
     int Nconf, Nsub, Nskip;
     if (strcmp(option[6], "C80") == 0) {
         Nconf = head.Nconf - 218;
@@ -182,13 +183,12 @@ int main(int argc, char** argv) {
         Nconf = head.Nconf;
         Nsub = head.Nconf / head.Njack;
     }
-    head.print_header();
+    // we need to init mu before pass the info to the global header
     head.mus.resize(1);
     head.mus[0] = std::atof(argv[7]);
     init_global_head(head);
 
-
-    check_head(head, infile_OS);;
+    head.print_header();
 
     //////////////////////////////////// setup jackboot and binning
     int confs = head.Njack;
@@ -239,7 +239,7 @@ int main(int argc, char** argv) {
         }
         data_bin_1 = bin_intoN(data_1, head.ncorr, head.T, 218, bin);
         // (confs, head.ncorr, head.T, data, bin);
-        free_corr(confs, head.ncorr, head.T, data_1);
+        free_corr(218, head.ncorr, head.T, data_1);
         conf_jack_1 = myres->create(Neff, head.ncorr, head.T, data_bin_1);
         free_corr(Neff, head.ncorr, head.T, data_bin_1);
     }
@@ -355,21 +355,178 @@ int main(int argc, char** argv) {
     double (*int_scheme)(int, int, double*);
     int_scheme = integrate_simpson38;
     int isub = -2;
-    int ibound =2;
+
+    //////////////////////////////////////////////////////////////
+    // no bounding
+    //////////////////////////////////////////////////////////////
     double* amu_TM = compute_amu_full(conf_jack, 0, Njack, ZA, a_fm, q2ud, int_scheme, outfile, "amu_{full}_(TM)", resampling, isub);
+    write_jack(amu_TM, Njack, jack_file);
     printf("amu_TM = %g  %g \n", amu_TM[Njack - 1], myres->comp_error(amu_TM));
     double* amu_OS = compute_amu_full(conf_jack, 1, Njack, ZV, a_fm, q2ud, int_scheme, outfile, "amu_{full}_(OS)", resampling, isub);
+    write_jack(amu_OS, Njack, jack_file);
     printf("amu_OS = %g  %g \n", amu_OS[Njack - 1], myres->comp_error(amu_OS));
 
+    //////////////////////////////////////////////////////////////
+    // bounding BMW
+    //////////////////////////////////////////////////////////////
+    int ibound = 2;
 
     double* amu_TM_bound = compute_amu_bounding(conf_jack, 0, Njack, ZA, a_fm, q2ud, int_scheme, outfile, "amu_{bound}_(TM)",
         resampling, isub, ibound, Mpi, nullptr, head.L);
+    write_jack(amu_TM_bound, Njack, jack_file);
     printf("amu_TM(bound) = %g  %g \n", amu_TM_bound[Njack - 1], myres->comp_error(amu_TM_bound));
 
     double* amu_OS_bound = compute_amu_bounding(conf_jack, 1, Njack, ZV, a_fm, q2ud, int_scheme, outfile, "amu_{bound}_(OS)",
         resampling, isub, ibound, Mpi, nullptr, head.L);
+    write_jack(amu_OS_bound, Njack, jack_file);
     printf("amu_OS(bound) = %g  %g \n", amu_OS_bound[Njack - 1], myres->comp_error(amu_OS_bound));
-    
+
+    //////////////////////////////////////////////////////////////
+    // bounding meff_t
+    //////////////////////////////////////////////////////////////
+    ibound = 3;
+
+    double* amu_TM_bound_meff_t = compute_amu_bounding(conf_jack, 0, Njack, ZA, a_fm, q2ud, int_scheme, outfile, "amu_{bound_meff_t}_(TM)",
+        resampling, isub, ibound, Mpi, nullptr, head.L);
+    write_jack(amu_TM_bound_meff_t, Njack, jack_file);
+    printf("amu_TM(bound_meff_t) = %g  %g \n", amu_TM_bound_meff_t[Njack - 1], myres->comp_error(amu_TM_bound_meff_t));
+
+    double* amu_OS_bound_meff_t = compute_amu_bounding(conf_jack, 1, Njack, ZV, a_fm, q2ud, int_scheme, outfile, "amu_{bound_meff_t}_(OS)",
+        resampling, isub, ibound, Mpi, nullptr, head.L);
+    write_jack(amu_OS_bound_meff_t, Njack, jack_file);
+    printf("amu_OS(bound_meff_t) = %g  %g \n", amu_OS_bound_meff_t[Njack - 1], myres->comp_error(amu_OS_bound_meff_t));
+
+    //////////////////////////////////////////////////////////////
+    // bounding meff
+    //////////////////////////////////////////////////////////////
+    ibound = 1;
+
+    double* M_VKVK_TM = plateau_correlator_function(
+        option, kinematic_2pt, (char*)"P5P5", conf_jack, Njack,
+        namefile_plateaux, outfile, 0, "M_VKVK_TM", M_eff_T, jack_file);
+
+    double* M_VKVK_OS = plateau_correlator_function(
+        option, kinematic_2pt, (char*)"P5P5", conf_jack, Njack,
+        namefile_plateaux, outfile, 1, "M_VKVK_OS", M_eff_T, jack_file);
+
+    double* amu_TM_bound_meff = compute_amu_bounding(conf_jack, 0, Njack, ZA, a_fm, q2ud, int_scheme, outfile, "amu_{bound_meff}_(TM)",
+        resampling, isub, ibound, Mpi, M_VKVK_TM, head.L);
+    write_jack(amu_TM_bound_meff, Njack, jack_file);
+    printf("amu_TM(bound_meff) = %g  %g \n", amu_TM_bound_meff[Njack - 1], myres->comp_error(amu_TM_bound_meff));
+
+    double* amu_OS_bound_meff = compute_amu_bounding(conf_jack, 1, Njack, ZV, a_fm, q2ud, int_scheme, outfile, "amu_{bound_meff}_(OS)",
+        resampling, isub, ibound, Mpi, M_VKVK_OS, head.L);
+    write_jack(amu_OS_bound_meff, Njack, jack_file);
+    printf("amu_OS(bound_meff) = %g  %g \n", amu_OS_bound_meff[Njack - 1], myres->comp_error(amu_OS_bound_meff));
+
+    double* amu_TM_bound_1;
+    double* amu_OS_bound_1;
+    double* amu_TM_bound_meff_t_1;
+    double* amu_OS_bound_meff_t_1;
+    double* zeros = (double*)calloc(Njack, sizeof(double));
+
+    if (strcmp(option[6], "C80") == 0) {
+        //////////////////////////////////////////////////////////////
+    // bounding BMW
+    //////////////////////////////////////////////////////////////
+        int ibound = 2;
+
+        amu_TM_bound_1 = compute_amu_bounding(conf_jack_1, 0, Njack, ZA, a_fm, q2ud, int_scheme, outfile, "amu_{bound}_(TM)_1",
+            resampling, isub, ibound, Mpi, nullptr, head.L);
+        write_jack(amu_TM_bound_1, Njack, jack_file);
+        printf("amu_TM(bound)_1 = %g  %g \n", amu_TM_bound_1[Njack - 1], myres->comp_error(amu_TM_bound_1));
+
+        amu_OS_bound_1 = compute_amu_bounding(conf_jack_1, 1, Njack, ZV, a_fm, q2ud, int_scheme, outfile, "amu_{bound}_(OS)_1",
+            resampling, isub, ibound, Mpi, nullptr, head.L);
+        write_jack(amu_OS_bound_1, Njack, jack_file);
+        printf("amu_OS(bound)_1 = %g  %g \n", amu_OS_bound_1[Njack - 1], myres->comp_error(amu_OS_bound_1));
+
+        //////////////////////////////////////////////////////////////
+        // bounding meff_t
+        //////////////////////////////////////////////////////////////
+        ibound = 3;
+
+        amu_TM_bound_meff_t_1 = compute_amu_bounding(conf_jack_1, 0, Njack, ZA, a_fm, q2ud, int_scheme, outfile, "amu_{bound_meff_t}_(TM)_1",
+            resampling, isub, ibound, Mpi, nullptr, head.L);
+        write_jack(amu_TM_bound_meff_t_1, Njack, jack_file);
+        printf("amu_TM(bound_meff_t)_1 = %g  %g \n", amu_TM_bound_meff_t_1[Njack - 1], myres->comp_error(amu_TM_bound_meff_t_1));
+
+        amu_OS_bound_meff_t_1 = compute_amu_bounding(conf_jack_1, 1, Njack, ZV, a_fm, q2ud, int_scheme, outfile, "amu_{bound_meff_t}_(OS)_1",
+            resampling, isub, ibound, Mpi, nullptr, head.L);
+        write_jack(amu_OS_bound_meff_t_1, Njack, jack_file);
+        printf("amu_OS(bound_meff_t)_1 = %g  %g \n", amu_OS_bound_meff_t_1[Njack - 1], myres->comp_error(amu_OS_bound_meff_t_1));
+
+    }
+    else {
+        zero_corr(zeros, Njack, jack_file);
+        zero_corr(zeros, Njack, jack_file);
+        zero_corr(zeros, Njack, jack_file);
+        zero_corr(zeros, Njack, jack_file);
+    }
+
+    double* amu_TM_bound_ave = (double*)malloc(sizeof(double) * Njack);;
+    double* amu_OS_bound_ave = (double*)malloc(sizeof(double) * Njack);
+    double* amu_TM_bound_meff_t_ave = (double*)malloc(sizeof(double) * Njack);
+    double* amu_OS_bound_meff_t_ave = (double*)malloc(sizeof(double) * Njack);
+
+    if (strcmp(option[6], "C80") == 0) {
+        myres->add(amu_TM_bound_ave, amu_TM_bound, amu_TM_bound_1);
+        myres->add(amu_OS_bound_ave, amu_OS_bound, amu_OS_bound_1);
+        myres->add(amu_TM_bound_meff_t_ave, amu_TM_bound_meff_t, amu_TM_bound_meff_t_1);
+        myres->add(amu_OS_bound_meff_t_ave, amu_OS_bound_meff_t, amu_OS_bound_meff_t_1);
+        myres->div(amu_TM_bound_ave, amu_TM_bound_ave, 2.0);
+        myres->div(amu_OS_bound_ave, amu_OS_bound_ave, 2.0);
+        myres->div(amu_TM_bound_meff_t_ave, amu_TM_bound_meff_t_ave, 2.0);
+        myres->div(amu_OS_bound_meff_t_ave, amu_OS_bound_meff_t_ave, 2.0);
+    }
+    else {
+        myres->copy(amu_TM_bound_ave, amu_TM_bound);
+        myres->copy(amu_OS_bound_ave, amu_OS_bound);
+        myres->copy(amu_TM_bound_meff_t_ave, amu_TM_bound_meff_t);
+        myres->copy(amu_OS_bound_meff_t_ave, amu_OS_bound_meff_t);
+
+    }
+    write_jack(amu_TM_bound_ave, Njack, jack_file);
+    write_jack(amu_OS_bound_ave, Njack, jack_file);
+    write_jack(amu_TM_bound_meff_t_ave, Njack, jack_file);
+    write_jack(amu_OS_bound_meff_t_ave, Njack, jack_file);
+
+    printf("amu_TM(bound)_ave = %g  %g \n", amu_TM_bound_ave[Njack - 1], myres->comp_error(amu_TM_bound_ave));
+    printf("amu_OS(bound)_ave = %g  %g \n", amu_OS_bound_ave[Njack - 1], myres->comp_error(amu_OS_bound_ave));
+    printf("amu_TM(bound_meff_t)_ave = %g  %g \n", amu_TM_bound_meff_t_ave[Njack - 1], myres->comp_error(amu_TM_bound_meff_t_ave));
+    printf("amu_OS(bound_meff_t)_ave = %g  %g \n", amu_OS_bound_meff_t_ave[Njack - 1], myres->comp_error(amu_OS_bound_meff_t_ave));
+    ///// to get the result in quarto
+    fprintf(outfile, " \n\n#\n%d   %.15g   %.15g %d   %.15g   %.15g", 0, 0.0, 0.0, 0, 0.0, 0.0);
+    fprintf(outfile, "\n\n #amu_{bound}_(TM)_ave_eigen fit in [%d,%d] chi2=%.5g  %.5g\n", 1, 1, 0.0, 0.0);
+    fprintf(outfile, "   %.15g   %15.g\n", amu_TM_bound_ave[Njack - 1], myres->comp_error(amu_TM_bound_ave));
+
+    fprintf(outfile, " \n\n#\n%d   %.15g   %.15g %d   %.15g   %.15g", 0, 0.0, 0.0, 0, 0.0, 0.0);
+    fprintf(outfile, "\n\n #amu_{bound}_(OS)_ave_eigen fit in [%d,%d] chi2=%.5g  %.5g\n", 1, 1, 0.0, 0.0);
+    fprintf(outfile, "   %.15g   %15.g\n", amu_OS_bound_ave[Njack - 1], myres->comp_error(amu_OS_bound_ave));
+
+    fprintf(outfile, " \n\n#\n%d   %.15g   %.15g %d   %.15g   %.15g", 0, 0.0, 0.0, 0, 0.0, 0.0);
+    fprintf(outfile, "\n\n #amu_{bound_meff_t}_(TM)_ave_eigen fit in [%d,%d] chi2=%.5g  %.5g\n", 1, 1, 0.0, 0.0);
+    fprintf(outfile, "   %.15g   %15.g\n", amu_TM_bound_meff_t_ave[Njack - 1], myres->comp_error(amu_TM_bound_meff_t_ave));
+
+    fprintf(outfile, " \n\n#\n%d   %.15g   %.15g %d   %.15g   %.15g", 0, 0.0, 0.0, 0, 0.0, 0.0);
+    fprintf(outfile, "\n\n #amu_{bound_meff_t}_(OS)_ave_eigen fit in [%d,%d] chi2=%.5g  %.5g\n", 1, 1, 0.0, 0.0);
+    fprintf(outfile, "   %.15g   %15.g\n", amu_OS_bound_meff_t_ave[Njack - 1], myres->comp_error(amu_OS_bound_meff_t_ave));
+
+
+
+    //////////////////////////////////////////////////////////////
+    // bounding meff_tmin
+    //////////////////////////////////////////////////////////////
+    // ibound = 4;
+
+    // double* amu_TM_bound_meff_tmin = compute_amu_bounding(conf_jack, 0, Njack, ZA, a_fm, q2ud, int_scheme, outfile, "amu_{bound_meff_tmin}_(TM)",
+    //     resampling, isub, ibound, Mpi, nullptr, head.L);
+    // printf("amu_TM(bound_meff_tmin) = %g  %g \n", amu_TM_bound_meff_tmin[Njack - 1], myres->comp_error(amu_TM_bound_meff_tmin));
+
+    // double* amu_OS_bound_meff_tmin = compute_amu_bounding(conf_jack, 1, Njack, ZV, a_fm, q2ud, int_scheme, outfile, "amu_{bound_meff_tmin}_(OS)",
+    //     resampling, isub, ibound, Mpi, nullptr, head.L);
+    // printf("amu_OS(bound_meff_tmin) = %g  %g \n", amu_OS_bound_meff_tmin[Njack - 1], myres->comp_error(amu_OS_bound_meff_tmin));
+
     // double* amu_OS_bound = compute_amu_full(conf_jack, 1, Njack, ZV, a_fm, q2ud, int_scheme, outfile, "amu_{full}_(OS)", resampling, isub);
 
     // double* M_PS = plateau_correlator_function(
