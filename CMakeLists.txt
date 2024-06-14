@@ -54,3 +54,9 @@ IF(WITH_ARB)
   target_link_libraries(blinded_gm2 PUBLIC flint-arb flint)
 ENDIF()
 target_link_libraries(blinded_gm2 PUBLIC ${ANALYSIS_PROGRAM_LIBRARIES})
+
+
+add_executable(fit_all_blind fit_all_blind.cpp)
+target_link_libraries(fit_all_blind PUBLIC functions_blinded_gm2)
+target_link_libraries(blinded_gm2 PUBLIC ${ANALYSIS_PROGRAM_LIBRARIES})
+

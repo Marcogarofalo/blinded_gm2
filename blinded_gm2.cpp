@@ -211,6 +211,8 @@ int main(int argc, char** argv) {
     // now Njack need to be the number of jacks
     head.Nconf = head.Njack;
     head.Njack = Njack;
+    head.ncorr = 1;
+    head.size = head.ncorr * head.T * 2;
     //////////////////////////////////// setup output files
     mysprintf(namefile, NAMESIZE, "%s/out/%s_output", option[3], option[6]);
     printf("writing output in :\n %s \n", namefile);
@@ -356,6 +358,11 @@ int main(int argc, char** argv) {
     int_scheme = integrate_simpson38;
     int isub = -2;
 
+    // 
+    write_jack(a_fm, Njack, jack_file);
+    write_jack(ZA, Njack, jack_file);
+    write_jack(ZV, Njack, jack_file);
+    write_jack(Mpi, Njack, jack_file);
     //////////////////////////////////////////////////////////////
     // no bounding
     //////////////////////////////////////////////////////////////
@@ -486,10 +493,10 @@ int main(int argc, char** argv) {
         myres->copy(amu_OS_bound_meff_t_ave, amu_OS_bound_meff_t);
 
     }
-    write_jack(amu_TM_bound_ave, Njack, jack_file);
-    write_jack(amu_OS_bound_ave, Njack, jack_file);
-    write_jack(amu_TM_bound_meff_t_ave, Njack, jack_file);
-    write_jack(amu_OS_bound_meff_t_ave, Njack, jack_file);
+    write_jack(amu_TM_bound_ave, Njack, jack_file); check_correlatro_counter(18);
+    write_jack(amu_OS_bound_ave, Njack, jack_file); check_correlatro_counter(19);
+    write_jack(amu_TM_bound_meff_t_ave, Njack, jack_file); check_correlatro_counter(20);
+    write_jack(amu_OS_bound_meff_t_ave, Njack, jack_file); check_correlatro_counter(21);
 
     printf("amu_TM(bound)_ave = %g  %g \n", amu_TM_bound_ave[Njack - 1], myres->comp_error(amu_TM_bound_ave));
     printf("amu_OS(bound)_ave = %g  %g \n", amu_OS_bound_ave[Njack - 1], myres->comp_error(amu_OS_bound_ave));
