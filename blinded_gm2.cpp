@@ -430,12 +430,14 @@ int main(int argc, char** argv) {
     double* amu_OS_bound_1;
     double* amu_TM_bound_meff_t_1;
     double* amu_OS_bound_meff_t_1;
+    double* amu_TM_bound_meff_1;
+    double* amu_OS_bound_meff_1;
     double* zeros = (double*)calloc(Njack, sizeof(double));
 
     if (strcmp(option[6], "C80") == 0) {
         //////////////////////////////////////////////////////////////
-    // bounding BMW
-    //////////////////////////////////////////////////////////////
+        // bounding BMW
+        //////////////////////////////////////////////////////////////
         int ibound = 2;
 
         amu_TM_bound_1 = compute_amu_bounding(conf_jack_1, 0, Njack, ZA, a_fm, q2ud, int_scheme, outfile, "amu_{bound}_(TM)_1",
@@ -463,8 +465,37 @@ int main(int argc, char** argv) {
         write_jack(amu_OS_bound_meff_t_1, Njack, jack_file);
         printf("amu_OS(bound_meff_t)_1 = %g  %g \n", amu_OS_bound_meff_t_1[Njack - 1], myres->comp_error(amu_OS_bound_meff_t_1));
 
+        //////////////////////////////////////////////////////////////
+        // bounding meff
+        //////////////////////////////////////////////////////////////
+        ibound = 1;
+
+        double* M_VKVK_TM_1 = plateau_correlator_function(
+            option, kinematic_2pt, (char*)"P5P5", conf_jack_1, Njack,
+            namefile_plateaux, outfile, 0, "M_VKVK_TM_1", M_eff_T, jack_file);
+
+        double* M_VKVK_OS_1 = plateau_correlator_function(
+            option, kinematic_2pt, (char*)"P5P5", conf_jack_1, Njack,
+            namefile_plateaux, outfile, 1, "M_VKVK_OS_1", M_eff_T, jack_file);
+
+        amu_TM_bound_meff_1 = compute_amu_bounding(conf_jack_1, 0, Njack, ZA, a_fm, q2ud, int_scheme, outfile, "amu_{bound_meff}_(TM)_1",
+            resampling, isub, ibound, Mpi, M_VKVK_TM_1, head.L);
+        write_jack(amu_TM_bound_meff, Njack, jack_file);
+        printf("amu_{bound_meff}_(TM)_1 = %g  %g \n", amu_TM_bound_meff[Njack - 1], myres->comp_error(amu_TM_bound_meff));
+
+        amu_OS_bound_meff_1 = compute_amu_bounding(conf_jack_1, 1, Njack, ZV, a_fm, q2ud, int_scheme, outfile, "amu_{bound_meff}_(OS)_1",
+            resampling, isub, ibound, Mpi, M_VKVK_OS_1, head.L);
+        write_jack(amu_OS_bound_meff, Njack, jack_file);
+        printf("amu_{bound_meff}_(OS)_1 = %g  %g \n", amu_OS_bound_meff[Njack - 1], myres->comp_error(amu_OS_bound_meff));
+
+
     }
     else {
+        zero_corr(zeros, Njack, jack_file);
+        zero_corr(zeros, Njack, jack_file);
+        zero_corr(zeros, Njack, jack_file);
+        zero_corr(zeros, Njack, jack_file);
+
         zero_corr(zeros, Njack, jack_file);
         zero_corr(zeros, Njack, jack_file);
         zero_corr(zeros, Njack, jack_file);
@@ -475,33 +506,44 @@ int main(int argc, char** argv) {
     double* amu_OS_bound_ave = (double*)malloc(sizeof(double) * Njack);
     double* amu_TM_bound_meff_t_ave = (double*)malloc(sizeof(double) * Njack);
     double* amu_OS_bound_meff_t_ave = (double*)malloc(sizeof(double) * Njack);
-
+    double* amu_TM_bound_meff_ave = (double*)malloc(sizeof(double) * Njack);
+    double* amu_OS_bound_meff_ave = (double*)malloc(sizeof(double) * Njack);
     if (strcmp(option[6], "C80") == 0) {
         myres->add(amu_TM_bound_ave, amu_TM_bound, amu_TM_bound_1);
         myres->add(amu_OS_bound_ave, amu_OS_bound, amu_OS_bound_1);
         myres->add(amu_TM_bound_meff_t_ave, amu_TM_bound_meff_t, amu_TM_bound_meff_t_1);
         myres->add(amu_OS_bound_meff_t_ave, amu_OS_bound_meff_t, amu_OS_bound_meff_t_1);
+        myres->add(amu_TM_bound_meff_ave, amu_TM_bound_meff, amu_TM_bound_meff_1);
+        myres->add(amu_OS_bound_meff_ave, amu_OS_bound_meff, amu_OS_bound_meff_1);
         myres->div(amu_TM_bound_ave, amu_TM_bound_ave, 2.0);
         myres->div(amu_OS_bound_ave, amu_OS_bound_ave, 2.0);
         myres->div(amu_TM_bound_meff_t_ave, amu_TM_bound_meff_t_ave, 2.0);
         myres->div(amu_OS_bound_meff_t_ave, amu_OS_bound_meff_t_ave, 2.0);
+        myres->div(amu_TM_bound_meff_ave, amu_TM_bound_meff_ave, 2.0);
+        myres->div(amu_OS_bound_meff_ave, amu_OS_bound_meff_ave, 2.0);
     }
     else {
         myres->copy(amu_TM_bound_ave, amu_TM_bound);
         myres->copy(amu_OS_bound_ave, amu_OS_bound);
         myres->copy(amu_TM_bound_meff_t_ave, amu_TM_bound_meff_t);
         myres->copy(amu_OS_bound_meff_t_ave, amu_OS_bound_meff_t);
+        myres->copy(amu_TM_bound_meff_ave, amu_TM_bound_meff);
+        myres->copy(amu_OS_bound_meff_ave, amu_OS_bound_meff);
 
     }
-    write_jack(amu_TM_bound_ave, Njack, jack_file); check_correlatro_counter(18);
-    write_jack(amu_OS_bound_ave, Njack, jack_file); check_correlatro_counter(19);
-    write_jack(amu_TM_bound_meff_t_ave, Njack, jack_file); check_correlatro_counter(20);
-    write_jack(amu_OS_bound_meff_t_ave, Njack, jack_file); check_correlatro_counter(21);
+    write_jack(amu_TM_bound_ave, Njack, jack_file); check_correlatro_counter(22);
+    write_jack(amu_OS_bound_ave, Njack, jack_file); check_correlatro_counter(23);
+    write_jack(amu_TM_bound_meff_t_ave, Njack, jack_file); check_correlatro_counter(24);
+    write_jack(amu_OS_bound_meff_t_ave, Njack, jack_file); check_correlatro_counter(25);
+    write_jack(amu_TM_bound_meff_ave, Njack, jack_file); check_correlatro_counter(26);
+    write_jack(amu_OS_bound_meff_ave, Njack, jack_file); check_correlatro_counter(27);
 
     printf("amu_TM(bound)_ave = %g  %g \n", amu_TM_bound_ave[Njack - 1], myres->comp_error(amu_TM_bound_ave));
     printf("amu_OS(bound)_ave = %g  %g \n", amu_OS_bound_ave[Njack - 1], myres->comp_error(amu_OS_bound_ave));
     printf("amu_TM(bound_meff_t)_ave = %g  %g \n", amu_TM_bound_meff_t_ave[Njack - 1], myres->comp_error(amu_TM_bound_meff_t_ave));
     printf("amu_OS(bound_meff_t)_ave = %g  %g \n", amu_OS_bound_meff_t_ave[Njack - 1], myres->comp_error(amu_OS_bound_meff_t_ave));
+    printf("amu_TM(bound_meff)_ave = %g  %g \n", amu_TM_bound_meff_ave[Njack - 1], myres->comp_error(amu_TM_bound_meff_ave));
+    printf("amu_OS(bound_meff)_ave = %g  %g \n", amu_OS_bound_meff_ave[Njack - 1], myres->comp_error(amu_OS_bound_meff_ave));
     ///// to get the result in quarto
     fprintf(outfile, " \n\n#\n%d   %.15g   %.15g %d   %.15g   %.15g", 0, 0.0, 0.0, 0, 0.0, 0.0);
     fprintf(outfile, "\n\n #amu_{bound}_(TM)_ave_eigen fit in [%d,%d] chi2=%.5g  %.5g\n", 1, 1, 0.0, 0.0);
@@ -519,6 +561,13 @@ int main(int argc, char** argv) {
     fprintf(outfile, "\n\n #amu_{bound_meff_t}_(OS)_ave_eigen fit in [%d,%d] chi2=%.5g  %.5g\n", 1, 1, 0.0, 0.0);
     fprintf(outfile, "   %.15g   %15.g\n", amu_OS_bound_meff_t_ave[Njack - 1], myres->comp_error(amu_OS_bound_meff_t_ave));
 
+    fprintf(outfile, " \n\n#\n%d   %.15g   %.15g %d   %.15g   %.15g", 0, 0.0, 0.0, 0, 0.0, 0.0);
+    fprintf(outfile, "\n\n #amu_{bound_meff}_(TM)_ave_eigen fit in [%d,%d] chi2=%.5g  %.5g\n", 1, 1, 0.0, 0.0);
+    fprintf(outfile, "   %.15g   %15.g\n", amu_TM_bound_meff_ave[Njack - 1], myres->comp_error(amu_TM_bound_meff_ave));
+
+    fprintf(outfile, " \n\n#\n%d   %.15g   %.15g %d   %.15g   %.15g", 0, 0.0, 0.0, 0, 0.0, 0.0);
+    fprintf(outfile, "\n\n #amu_{bound_meff}_(OS)_ave_eigen fit in [%d,%d] chi2=%.5g  %.5g\n", 1, 1, 0.0, 0.0);
+    fprintf(outfile, "   %.15g   %15.g\n", amu_OS_bound_meff_ave[Njack - 1], myres->comp_error(amu_OS_bound_meff_ave));
 
 
     //////////////////////////////////////////////////////////////
