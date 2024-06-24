@@ -36,7 +36,8 @@
 
 enum enum_ensembles_blind_gm2 {
     B64 = 0,
-    C80 = 1
+    C80 = 1,
+    D96 = 2 
 };
 // generic_header read_header(FILE* stream) {
 //     generic_header header;
@@ -143,7 +144,9 @@ int main(int argc, char** argv) {
     files.emplace_back(namefile);
     mysprintf(namefile, NAMESIZE, "%s/%s_C80", argv[2], argv[1]);
     files.emplace_back(namefile);
-
+    mysprintf(namefile, NAMESIZE, "%s/%s_D96", argv[2], argv[1]);
+    files.emplace_back(namefile);
+    
     std::vector<int> myen(files.size());
     for (int e = 0; e < files.size(); e++) {
         myen[e] = e;
@@ -180,7 +183,7 @@ int main(int argc, char** argv) {
     fit_info.Npar = 3;
     fit_info.Nvar = 2;
     fit_info.Njack = Njack;
-    fit_info.myen = { B64, C80 };
+    fit_info.myen = { B64, C80, D96 };
     fit_info.init_Nxen_from_N_myen();
     fit_info.malloc_x();
     int count = 0;
@@ -193,7 +196,7 @@ int main(int argc, char** argv) {
             count++;
         }
     }
-    fit_info.corr_id = { 18,19 };
+    fit_info.corr_id = { 22,23 };
     fit_info.function = rhs_two_line;
     fit_info.linear_fit = true;
     fit_info.covariancey = true;
