@@ -571,6 +571,21 @@ int main(int argc, char** argv) {
 
 
     //////////////////////////////////////////////////////////////
+    // unblind combo
+    //////////////////////////////////////////////////////////////
+    struct fit_type fit_info;
+    fit_info.Njack = Njack;
+    fit_info.T = head.T;
+    fit_info.corr_id = { 0,1 };
+
+    double* ones = myres->create_fake(1, 0.0000001, 1);
+    double* X = unblind_combo(conf_jack, ZA, ZV, fit_info);
+    printf("X(%s)= %g   %g \n", argv[3],X[Njack-1], myres->comp_error(X));
+    if (strcmp(option[6], "C80") == 0) {
+        double* X1 = unblind_combo(conf_jack_1, ZA, ZV, fit_info);
+        printf("X430(%s)= %g   %g \n", argv[3],X1[Njack-1], myres->comp_error(X1));
+    }
+    //////////////////////////////////////////////////////////////
     // bounding meff_tmin
     //////////////////////////////////////////////////////////////
     // ibound = 4;
