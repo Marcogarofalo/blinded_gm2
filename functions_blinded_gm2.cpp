@@ -44,3 +44,10 @@ double* unblind_combo(double**** in, double* ZA, double* ZV, struct fit_type fit
     return X;
 
 }
+double lhs_to_C80_to_Mphys(int n, int e, int j, data_all gjack, struct fit_type fit_info) {
+    double r;
+    r = gjack.en[e].jack[fit_info.corr_id[n]][j]+ gjack.en[e].jack[fit_info.corr_id[2]][j]+ gjack.en[e].jack[fit_info.corr_id[3]][j];
+
+    return r;
+}
+

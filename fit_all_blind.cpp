@@ -37,7 +37,7 @@
 enum enum_ensembles_blind_gm2 {
     B64 = 0,
     C80 = 1,
-    D96 = 2 
+    D96 = 2
 };
 // generic_header read_header(FILE* stream) {
 //     generic_header header;
@@ -146,7 +146,7 @@ int main(int argc, char** argv) {
     files.emplace_back(namefile);
     mysprintf(namefile, NAMESIZE, "%s/%s_D96", argv[2], argv[1]);
     files.emplace_back(namefile);
-    
+
     std::vector<int> myen(files.size());
     for (int e = 0; e < files.size(); e++) {
         myen[e] = e;
@@ -196,7 +196,7 @@ int main(int argc, char** argv) {
             count++;
         }
     }
-    fit_info.corr_id = { 22,23 };
+    fit_info.corr_id = { 22,23 , 29, 31 };
     fit_info.function = rhs_two_line;
     fit_info.linear_fit = true;
     fit_info.covariancey = true;
@@ -216,8 +216,8 @@ int main(int argc, char** argv) {
         }
     }
     fit_info.compute_cov1_fit();
-    mysprintf(namefit, NAMESIZE, "amu_bound_a2");
-    fit_result amu_linear = fit_all_data(argv, jackall, lhs_identity, fit_info, namefit);
+    mysprintf(namefit, NAMESIZE, "amu_bound_a2_GS_L_Mpi");
+    fit_result amu_linear = fit_all_data(argv, jackall, lhs_to_C80_to_Mphys, fit_info, namefit);
     fit_info.band_range = { 0,0.0081 };
     std::vector<double> xcont = {};
     print_fit_band(argv, jackall, fit_info, fit_info, namefit, "afm", amu_linear, amu_linear, 0, fit_info.myen.size() - 1, 0.0005, xcont);

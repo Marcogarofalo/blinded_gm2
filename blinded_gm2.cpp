@@ -8,6 +8,7 @@
 #include <fstream>
 #include <iostream>
 #include <string>
+#include <filesystem>
 
 #include "global.hpp"
 #include "read.hpp"
@@ -21,8 +22,28 @@
 #include "functions_blinded_gm2.hpp"
 
 #include "functions_amu.hpp"
+constexpr double Mrho_MeV = 775.0;
+// constexpr double Mrho_MeV = 770.0;
+constexpr double Mrho_MeV_err = 0.4;
+
+// constexpr double grhopipi = 6.06;
+// constexpr double grhopipi_err = 0.03;
+
+constexpr double grhopipi = 5.95;
+// constexpr double grhopipi = 5.5;
+constexpr double grhopipi_err = 0.0001;
+
 
 struct kinematic kinematic_2pt;
+
+void weighted_average(double* out, double* in1, double* in2) {
+    double w1 = 1.0 / myres->comp_error(in1);
+    double w2 = 1.0 / myres->comp_error(in2);
+    double se = w1 + w2;
+    w1 /= se;
+    w2 /= se;
+    myres->linear_comb(out, w1, in1, w2, in2);
+}
 
 generic_header read_head(FILE* stream) {
     generic_header header;
@@ -509,18 +530,13 @@ int main(int argc, char** argv) {
     double* amu_TM_bound_meff_ave = (double*)malloc(sizeof(double) * Njack);
     double* amu_OS_bound_meff_ave = (double*)malloc(sizeof(double) * Njack);
     if (strcmp(option[6], "C80") == 0) {
-        myres->add(amu_TM_bound_ave, amu_TM_bound, amu_TM_bound_1);
-        myres->add(amu_OS_bound_ave, amu_OS_bound, amu_OS_bound_1);
-        myres->add(amu_TM_bound_meff_t_ave, amu_TM_bound_meff_t, amu_TM_bound_meff_t_1);
-        myres->add(amu_OS_bound_meff_t_ave, amu_OS_bound_meff_t, amu_OS_bound_meff_t_1);
-        myres->add(amu_TM_bound_meff_ave, amu_TM_bound_meff, amu_TM_bound_meff_1);
-        myres->add(amu_OS_bound_meff_ave, amu_OS_bound_meff, amu_OS_bound_meff_1);
-        myres->div(amu_TM_bound_ave, amu_TM_bound_ave, 2.0);
-        myres->div(amu_OS_bound_ave, amu_OS_bound_ave, 2.0);
-        myres->div(amu_TM_bound_meff_t_ave, amu_TM_bound_meff_t_ave, 2.0);
-        myres->div(amu_OS_bound_meff_t_ave, amu_OS_bound_meff_t_ave, 2.0);
-        myres->div(amu_TM_bound_meff_ave, amu_TM_bound_meff_ave, 2.0);
-        myres->div(amu_OS_bound_meff_ave, amu_OS_bound_meff_ave, 2.0);
+        weighted_average(amu_TM_bound_ave, amu_TM_bound, amu_TM_bound_1);
+        weighted_average(amu_OS_bound_ave, amu_OS_bound, amu_OS_bound_1);
+        weighted_average(amu_TM_bound_meff_t_ave, amu_TM_bound_meff_t, amu_TM_bound_meff_t_1);
+        weighted_average(amu_OS_bound_meff_t_ave, amu_OS_bound_meff_t, amu_OS_bound_meff_t_1);
+        weighted_average(amu_TM_bound_meff_ave, amu_TM_bound_meff, amu_TM_bound_meff_1);
+        weighted_average(amu_OS_bound_meff_ave, amu_OS_bound_meff, amu_OS_bound_meff_1);
+
     }
     else {
         myres->copy(amu_TM_bound_ave, amu_TM_bound);
@@ -580,11 +596,87 @@ int main(int argc, char** argv) {
 
     double* ones = myres->create_fake(1, 0.0000001, 1);
     double* X = unblind_combo(conf_jack, ZA, ZV, fit_info);
-    printf("X(%s)= %g   %g \n", argv[3],X[Njack-1], myres->comp_error(X));
+    printf("X(%s)= %g   %g \n", argv[3], X[Njack - 1], myres->comp_error(X));
     if (strcmp(option[6], "C80") == 0) {
         double* X1 = unblind_combo(conf_jack_1, ZA, ZV, fit_info);
-        printf("X430(%s)= %g   %g \n", argv[3],X1[Njack-1], myres->comp_error(X1));
+        printf("X430(%s)= %g   %g \n", argv[3], X1[Njack - 1], myres->comp_error(X1));
     }
+    //////////////////////////////////////////////////////////////
+    // FVE GS
+    //////////////////////////////////////////////////////////////
+    char name_GS[NAMESIZE];
+    mysprintf(name_GS, NAMESIZE, "%s/out/%s_GS", option[3], option[6]);
+    double* DV;
+    double* DV_M;
+    double* DV_Mpi_phys;
+    double* DV_DM;
+    double* DV_C80;
+    double* DV_to_C80;
+    if (std::filesystem::exists(name_GS)) {
+        printf("reading GS from file %s\n", name_GS);
+        DV = new double[Njack];
+        DV_M = new double[Njack];
+        DV_Mpi_phys = new double[Njack];
+        DV_DM = new double[Njack];
+        DV_C80 = new double[Njack];
+        DV_to_C80 = new double[Njack];
+
+        FILE* f = open_file(name_GS, "r+");
+        int fi = 00;
+        int read_j = -1;
+        fi += fscanf(f, "%d\n", &read_j);
+        error(read_j != Njack, 1, "main", "Njack in file %g");
+        for (int j = 0; j < Njack;j++)    fi += fscanf(f, "%lf\n", &DV[j]);
+        for (int j = 0; j < Njack;j++)    fi += fscanf(f, "%lf\n", &DV_M[j]);
+        for (int j = 0; j < Njack;j++)    fi += fscanf(f, "%lf\n", &DV_Mpi_phys[j]);
+        for (int j = 0; j < Njack;j++)    fi += fscanf(f, "%lf\n", &DV_DM[j]);
+        for (int j = 0; j < Njack;j++)    fi += fscanf(f, "%lf\n", &DV_C80[j]);
+        for (int j = 0; j < Njack;j++)    fi += fscanf(f, "%lf\n", &DV_to_C80[j]);
+        fclose(f);
+        printf("reading GS complete\n");
+    }
+    else {
+        double* Mpi_phys_Mev = myres->create_fake(v_MpiMeV, err_MpiMeV, 1003);
+        double* MpiMev = new double[Njack];
+        for (int j = 0;j < Njack;j++) {
+            MpiMev[j] = Mpi[j] / (a_fm[j] / 197.326963);
+        }
+        double* jack_Mrho_MeV_exp = fake_sampling(resampling, Mrho_MeV, Mrho_MeV_err, Njack, 1001);
+        double* jack_grhopipi = fake_sampling(resampling, grhopipi, grhopipi_err, Njack, 1002);
+        DV = compute_DVt_and_integrate(head.L, Njack, MpiMev /* jack_Mpi_MeV_exp */, jack_Mrho_MeV_exp, a_fm, jack_grhopipi, outfile, "DVt", resampling, 24, 1);
+
+
+        DV_M = compute_DVt_and_integrate(head.L, Njack, MpiMev /* jack_Mpi_MeV_exp */, jack_Mrho_MeV_exp, a_fm, jack_grhopipi, outfile, "DVt_M", resampling, 24, 2);
+        DV_Mpi_phys = compute_DVt_and_integrate(head.L, Njack, Mpi_phys_Mev /* jack_Mpi_MeV_exp */, jack_Mrho_MeV_exp, a_fm, jack_grhopipi, outfile, "DVt_Mpiphys", resampling, 24, 2);
+        DV_DM = new double[Njack];
+        myres->sub(DV_DM, DV_Mpi_phys, DV_M);
+
+        double* a_fm_C80 = myres->create_fake(0.06821, 0.00013, 5);
+        int L_C80 = 80;
+        DV_C80 = compute_DVt_and_integrate(L_C80, Njack, MpiMev /* jack_Mpi_MeV_exp */, jack_Mrho_MeV_exp, a_fm_C80, jack_grhopipi, outfile, "DVtC80", resampling, 24, 1);
+
+        DV_to_C80 = myres->create_copy(DV);
+        myres->sub(DV_to_C80, DV, DV_C80);
+        FILE* f = open_file(name_GS, "w+");
+        int fi = 00;
+        fi += fprintf(f, "%d\n", Njack);
+        for (int j = 0; j < Njack;j++)    fi += fprintf(f, "%.12g\n", DV[j]);
+        for (int j = 0; j < Njack;j++)    fi += fprintf(f, "%.12g\n", DV_M[j]);
+        for (int j = 0; j < Njack;j++)    fi += fprintf(f, "%.12g\n", DV_Mpi_phys[j]);
+        for (int j = 0; j < Njack;j++)    fi += fprintf(f, "%.12g\n", DV_DM[j]);
+        for (int j = 0; j < Njack;j++)    fi += fprintf(f, "%.12g\n", DV_C80[j]);
+        for (int j = 0; j < Njack;j++)    fi += fprintf(f, "%.12g\n", DV_to_C80[j]);
+        fclose(f);
+    }
+    printf("GS= %g  %g\n", (10.0 / 9.0) * DV[Njack - 1], (10.0 / 9.0) * myres->comp_error(DV));
+    printf("GS_M= %g  %g\n", (10.0 / 9.0) * DV_DM[Njack - 1], (10.0 / 9.0) * myres->comp_error(DV_DM));
+    printf("GS_C80= %g  %g\n", (10.0 / 9.0) * DV_C80[Njack - 1], (10.0 / 9.0) * myres->comp_error(DV_C80));
+    printf("GS_to_C80= %g  %g\n", (10.0 / 9.0) * DV_to_C80[Njack - 1], (10.0 / 9.0) * myres->comp_error(DV_to_C80));
+    write_jack(DV, Njack, jack_file); check_correlatro_counter(28);
+    write_jack(DV_DM, Njack, jack_file); check_correlatro_counter(29);
+    write_jack(DV_C80, Njack, jack_file); check_correlatro_counter(30);
+    write_jack(DV_to_C80, Njack, jack_file); check_correlatro_counter(31);
+
     //////////////////////////////////////////////////////////////
     // bounding meff_tmin
     //////////////////////////////////////////////////////////////
