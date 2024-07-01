@@ -600,6 +600,11 @@ int main(int argc, char** argv) {
     if (strcmp(option[6], "C80") == 0) {
         double* X1 = unblind_combo(conf_jack_1, ZA, ZV, fit_info);
         printf("X430(%s)= %g   %g \n", argv[3], X1[Njack - 1], myres->comp_error(X1));
+        double* X_ave = (double*)malloc(sizeof(double) * Njack);
+        weighted_average(X_ave, X, X1);
+        printf("X_ave(%s)= %g   %g \n", argv[3], X_ave[Njack - 1], myres->comp_error(X_ave));
+        free(X_ave);
+        free(X1);
     }
     //////////////////////////////////////////////////////////////
     // FVE GS
