@@ -222,4 +222,48 @@ int main(int argc, char** argv) {
     std::vector<double> xcont = {};
     print_fit_band(argv, jackall, fit_info, fit_info, namefit, "afm", amu_linear, amu_linear, 0, fit_info.myen.size() - 1, 0.0005, xcont);
 
+    ////////////////// meff_t bound
+
+    fit_info.corr_id = { 24,25 , 29, 31 };
+    fit_info.compute_cov_fit(argv, jackall, lhs_identity);
+    ie = 0, ie1 = 0;
+    for (int n = 0;n < fit_info.N;n++) {
+        for (int e = 0;e < fit_info.myen.size();e++) {
+            ie1 = 0;
+            for (int n1 = 0;n1 < fit_info.N;n1++) {
+                for (int e1 = 0;e1 < fit_info.myen.size();e1++) {
+                    if (e != e1)   fit_info.cov[ie][ie1] = 0;
+                    ie1++;
+                }
+            }
+            ie++;
+        }
+    }
+    fit_info.compute_cov1_fit();
+    mysprintf(namefit, NAMESIZE, "amu_bound_meff_t_a2_GS_L_Mpi");
+    fit_result amu_linear_meff_t = fit_all_data(argv, jackall, lhs_to_C80_to_Mphys, fit_info, namefit);
+    fit_info.band_range = { 0,0.0081 };
+    print_fit_band(argv, jackall, fit_info, fit_info, namefit, "afm", amu_linear_meff_t, amu_linear_meff_t, 0, fit_info.myen.size() - 1, 0.0005, xcont);
+    ////////////////// meff bound
+
+    fit_info.corr_id = { 26,27 , 29, 31 };
+    fit_info.compute_cov_fit(argv, jackall, lhs_identity);
+    ie = 0, ie1 = 0;
+    for (int n = 0;n < fit_info.N;n++) {
+        for (int e = 0;e < fit_info.myen.size();e++) {
+            ie1 = 0;
+            for (int n1 = 0;n1 < fit_info.N;n1++) {
+                for (int e1 = 0;e1 < fit_info.myen.size();e1++) {
+                    if (e != e1)   fit_info.cov[ie][ie1] = 0;
+                    ie1++;
+                }
+            }
+            ie++;
+        }
+    }
+    fit_info.compute_cov1_fit();
+    mysprintf(namefit, NAMESIZE, "amu_bound_meff_a2_GS_L_Mpi");
+    fit_result amu_linear_meff = fit_all_data(argv, jackall, lhs_to_C80_to_Mphys, fit_info, namefit);
+    print_fit_band(argv, jackall, fit_info, fit_info, namefit, "afm", amu_linear_meff, amu_linear_meff, 0, fit_info.myen.size() - 1, 0.0005, xcont);
+
 }
