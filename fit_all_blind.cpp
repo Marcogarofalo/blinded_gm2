@@ -201,7 +201,7 @@ int main(int argc, char** argv) {
     fit_info.linear_fit = true;
     fit_info.covariancey = true;
     fit_info.verbosity = 0;
-    fit_info.compute_cov_fit(argv, jackall, lhs_identity);
+    fit_info.compute_cov_fit(argv, jackall, lhs_to_C80_to_Mphys);
     int ie = 0, ie1 = 0;
     for (int n = 0;n < fit_info.N;n++) {
         for (int e = 0;e < fit_info.myen.size();e++) {
@@ -225,7 +225,7 @@ int main(int argc, char** argv) {
     ////////////////// meff_t bound
 
     fit_info.corr_id = { 24,25 , 29, 31 };
-    fit_info.compute_cov_fit(argv, jackall, lhs_identity);
+    fit_info.compute_cov_fit(argv, jackall, lhs_to_C80_to_Mphys);
     ie = 0, ie1 = 0;
     for (int n = 0;n < fit_info.N;n++) {
         for (int e = 0;e < fit_info.myen.size();e++) {
@@ -247,7 +247,7 @@ int main(int argc, char** argv) {
     ////////////////// meff bound
 
     fit_info.corr_id = { 26,27 , 29, 31 };
-    fit_info.compute_cov_fit(argv, jackall, lhs_identity);
+    fit_info.compute_cov_fit(argv, jackall, lhs_to_C80_to_Mphys);
     ie = 0, ie1 = 0;
     for (int n = 0;n < fit_info.N;n++) {
         for (int e = 0;e < fit_info.myen.size();e++) {
@@ -265,5 +265,287 @@ int main(int argc, char** argv) {
     mysprintf(namefit, NAMESIZE, "amu_bound_meff_a2_GS_L_Mpi");
     fit_result amu_linear_meff = fit_all_data(argv, jackall, lhs_to_C80_to_Mphys, fit_info, namefit);
     print_fit_band(argv, jackall, fit_info, fit_info, namefit, "afm", amu_linear_meff, amu_linear_meff, 0, fit_info.myen.size() - 1, 0.0005, xcont);
+
+
+    fit_info.restore_default();
+    //////////////////////////////////////////////////////////////
+    // difference
+    //////////////////////////////////////////////////////////////
+
+    ////////////////////////////////// BMW
+    fit_info.N = 1;
+    fit_info.corr_id = { 24, 23 ,29, 31 };
+    fit_info.Npar = 1;
+    fit_info.Njack = Njack;
+    fit_info.myen = { B64, C80, D96 };
+    fit_info.init_Nxen_from_N_myen();
+    fit_info.malloc_x();
+    count = 0;
+    for (int n = 0;n < fit_info.N;n++) {
+        for (int e : fit_info.myen) {
+            for (int j = 0;j < Njack;j++) {
+                fit_info.x[0][count][j] = jackall.en[e].jack[0][j] * jackall.en[e].jack[0][j];  // a^2
+                fit_info.x[1][count][j] = jackall.en[e].jack[3][j];  // Mpi
+            }
+            count++;
+        }
+    }
+    fit_info.corr_id = { 22,23 , 29, 31 };
+    fit_info.linear_fit = true;
+    fit_info.covariancey = true;
+    fit_info.init_Nxen_from_N_myen();
+    fit_info.function = rhs_one_line;
+    fit_info.compute_cov_fit(argv, jackall, lhs_TM_m_OS);
+    ie = 0, ie1 = 0;
+    for (int n = 0;n < fit_info.N;n++) {
+        for (int e = 0;e < fit_info.myen.size();e++) {
+            ie1 = 0;
+            for (int n1 = 0;n1 < fit_info.N;n1++) {
+                for (int e1 = 0;e1 < fit_info.myen.size();e1++) {
+                    if (e != e1)   fit_info.cov[ie][ie1] = 0;
+                    ie1++;
+                }
+            }
+            ie++;
+        }
+    }
+    fit_info.compute_cov1_fit();
+    mysprintf(namefit, NAMESIZE, "amu_diff_bound_a2");
+    fit_result amu_diff_linear = fit_all_data(argv, jackall, lhs_TM_m_OS, fit_info, namefit);
+    fit_info.band_range = { 0,0.0081 };
+    print_fit_band(argv, jackall, fit_info, fit_info, namefit, "afm", amu_diff_linear, amu_diff_linear, 0, fit_info.myen.size() - 1, 0.0005, xcont);
+
+    ////////////////// meff_t bound
+
+    fit_info.corr_id = { 24,25 , 29, 31 };
+    fit_info.compute_cov_fit(argv, jackall, lhs_TM_m_OS);
+    ie = 0, ie1 = 0;
+    for (int n = 0;n < fit_info.N;n++) {
+        for (int e = 0;e < fit_info.myen.size();e++) {
+            ie1 = 0;
+            for (int n1 = 0;n1 < fit_info.N;n1++) {
+                for (int e1 = 0;e1 < fit_info.myen.size();e1++) {
+                    if (e != e1)   fit_info.cov[ie][ie1] = 0;
+                    ie1++;
+                }
+            }
+            ie++;
+        }
+    }
+    fit_info.compute_cov1_fit();
+    mysprintf(namefit, NAMESIZE, "amu_diff_bound_meff_t_a2");
+    fit_result amu_diff_linear_meff_t = fit_all_data(argv, jackall, lhs_TM_m_OS, fit_info, namefit);
+    fit_info.band_range = { 0,0.0081 };
+    print_fit_band(argv, jackall, fit_info, fit_info, namefit, "afm", amu_diff_linear_meff_t, amu_diff_linear_meff_t, 0, fit_info.myen.size() - 1, 0.0005, xcont);
+    ////////////////// meff bound
+
+    fit_info.corr_id = { 26,27 , 29, 31 };
+    fit_info.compute_cov_fit(argv, jackall, lhs_TM_m_OS);
+    ie = 0, ie1 = 0;
+    for (int n = 0;n < fit_info.N;n++) {
+        for (int e = 0;e < fit_info.myen.size();e++) {
+            ie1 = 0;
+            for (int n1 = 0;n1 < fit_info.N;n1++) {
+                for (int e1 = 0;e1 < fit_info.myen.size();e1++) {
+                    if (e != e1)   fit_info.cov[ie][ie1] = 0;
+                    ie1++;
+                }
+            }
+            ie++;
+        }
+    }
+    fit_info.compute_cov1_fit();
+    mysprintf(namefit, NAMESIZE, "amu_diff_bound_meff_a2");
+    fit_result amu_diff_linear_meff = fit_all_data(argv, jackall, lhs_TM_m_OS, fit_info, namefit);
+    print_fit_band(argv, jackall, fit_info, fit_info, namefit, "afm", amu_diff_linear_meff, amu_diff_linear_meff, 0, fit_info.myen.size() - 1, 0.0005, xcont);
+
+
+    fit_info.restore_default();
+    //////////////////////////////////////////////////////////////
+    // ratio
+    //////////////////////////////////////////////////////////////
+
+    ////////////////////////////////// BMW
+    fit_info.N = 1;
+    fit_info.Npar = 1;
+    fit_info.Njack = Njack;
+    fit_info.myen = { B64, C80, D96 };
+    fit_info.init_Nxen_from_N_myen();
+    fit_info.malloc_x();
+    count = 0;
+    for (int n = 0;n < fit_info.N;n++) {
+        for (int e : fit_info.myen) {
+            for (int j = 0;j < Njack;j++) {
+                fit_info.x[0][count][j] = jackall.en[e].jack[0][j] * jackall.en[e].jack[0][j];  // a^2
+                fit_info.x[1][count][j] = jackall.en[e].jack[3][j];  // Mpi
+            }
+            count++;
+        }
+    }
+    fit_info.corr_id = { 22, 23, 29, 31 };
+    fit_info.linear_fit = true;
+    fit_info.covariancey = true;
+    fit_info.function = rhs_one_line_p1;
+    fit_info.compute_cov_fit(argv, jackall, lhs_TM_over_OSto_C80_to_Mphys);
+    ie = 0, ie1 = 0;
+    for (int n = 0;n < fit_info.N;n++) {
+        for (int e = 0;e < fit_info.myen.size();e++) {
+            ie1 = 0;
+            for (int n1 = 0;n1 < fit_info.N;n1++) {
+                for (int e1 = 0;e1 < fit_info.myen.size();e1++) {
+                    if (e != e1)   fit_info.cov[ie][ie1] = 0;
+                    ie1++;
+                }
+            }
+            ie++;
+        }
+    }
+    fit_info.compute_cov1_fit();
+    mysprintf(namefit, NAMESIZE, "amu_ratio_bound_a2");
+    fit_result amu_ratio_linear = fit_all_data(argv, jackall, lhs_TM_over_OSto_C80_to_Mphys, fit_info, namefit);
+    fit_info.band_range = { 0,0.0081 };
+    print_fit_band(argv, jackall, fit_info, fit_info, namefit, "afm", amu_ratio_linear, amu_ratio_linear, 0, fit_info.myen.size() - 1, 0.0005, xcont);
+
+    ////////////////// meff_t bound
+
+    fit_info.corr_id = { 24, 25, 29, 31 };
+    fit_info.compute_cov_fit(argv, jackall, lhs_TM_over_OSto_C80_to_Mphys);
+    ie = 0, ie1 = 0;
+    for (int n = 0;n < fit_info.N;n++) {
+        for (int e = 0;e < fit_info.myen.size();e++) {
+            ie1 = 0;
+            for (int n1 = 0;n1 < fit_info.N;n1++) {
+                for (int e1 = 0;e1 < fit_info.myen.size();e1++) {
+                    if (e != e1)   fit_info.cov[ie][ie1] = 0;
+                    ie1++;
+                }
+            }
+            ie++;
+        }
+    }
+    fit_info.compute_cov1_fit();
+    mysprintf(namefit, NAMESIZE, "amu_ratio_bound_meff_t_a2");
+    fit_result amu_ratio_linear_meff_t = fit_all_data(argv, jackall, lhs_TM_over_OSto_C80_to_Mphys, fit_info, namefit);
+    fit_info.band_range = { 0,0.0081 };
+    print_fit_band(argv, jackall, fit_info, fit_info, namefit, "afm", amu_ratio_linear_meff_t, amu_ratio_linear_meff_t, 0, fit_info.myen.size() - 1, 0.0005, xcont);
+    ////////////////// meff bound
+
+    fit_info.corr_id = { 26, 27, 29, 31 };
+    fit_info.compute_cov_fit(argv, jackall, lhs_TM_over_OSto_C80_to_Mphys);
+    ie = 0, ie1 = 0;
+    for (int n = 0;n < fit_info.N;n++) {
+        for (int e = 0;e < fit_info.myen.size();e++) {
+            ie1 = 0;
+            for (int n1 = 0;n1 < fit_info.N;n1++) {
+                for (int e1 = 0;e1 < fit_info.myen.size();e1++) {
+                    if (e != e1)   fit_info.cov[ie][ie1] = 0;
+                    ie1++;
+                }
+            }
+            ie++;
+        }
+    }
+    fit_info.compute_cov1_fit();
+    mysprintf(namefit, NAMESIZE, "amu_ratio_bound_meff_a2");
+    fit_result amu_ratio_linear_meff = fit_all_data(argv, jackall, lhs_TM_over_OSto_C80_to_Mphys, fit_info, namefit);
+    print_fit_band(argv, jackall, fit_info, fit_info, namefit, "afm", amu_ratio_linear_meff, amu_ratio_linear_meff, 0, fit_info.myen.size() - 1, 0.0005, xcont);
+
+
+    fit_info.restore_default();
+
+    //////////////////////////////////////////////////////////////
+    // average
+    //////////////////////////////////////////////////////////////
+
+    ////////////////////////////////// BMW
+    fit_info.N = 1;
+    fit_info.corr_id = { 24, 23 ,29, 31 };
+    fit_info.Npar = 2;
+    fit_info.Njack = Njack;
+    fit_info.myen = { B64, C80, D96 };
+    fit_info.init_Nxen_from_N_myen();
+    fit_info.malloc_x();
+    count = 0;
+    for (int n = 0;n < fit_info.N;n++) {
+        for (int e : fit_info.myen) {
+            for (int j = 0;j < Njack;j++) {
+                fit_info.x[0][count][j] = jackall.en[e].jack[0][j] * jackall.en[e].jack[0][j];  // a^2
+                fit_info.x[1][count][j] = jackall.en[e].jack[3][j];  // Mpi
+            }
+            count++;
+        }
+    }
+    fit_info.corr_id = { 22,23 , 29, 31 };
+    fit_info.linear_fit = true;
+    fit_info.covariancey = true;
+    fit_info.init_Nxen_from_N_myen();
+    fit_info.function = rhs_line;
+    fit_info.compute_cov_fit(argv, jackall, lhs_aveTMOS_to_C80_to_Mphys);
+    ie = 0, ie1 = 0;
+    for (int n = 0;n < fit_info.N;n++) {
+        for (int e = 0;e < fit_info.myen.size();e++) {
+            ie1 = 0;
+            for (int n1 = 0;n1 < fit_info.N;n1++) {
+                for (int e1 = 0;e1 < fit_info.myen.size();e1++) {
+                    if (e != e1)   fit_info.cov[ie][ie1] = 0;
+                    ie1++;
+                }
+            }
+            ie++;
+        }
+    }
+    fit_info.compute_cov1_fit();
+    mysprintf(namefit, NAMESIZE, "amu_ave_bound_a2");
+    fit_result amu_ave_linear = fit_all_data(argv, jackall, lhs_aveTMOS_to_C80_to_Mphys, fit_info, namefit);
+    fit_info.band_range = { 0,0.0081 };
+    print_fit_band(argv, jackall, fit_info, fit_info, namefit, "afm", amu_ave_linear, amu_ave_linear, 0, fit_info.myen.size() - 1, 0.0005, xcont);
+
+    ////////////////// meff_t bound
+
+    fit_info.corr_id = { 24,25 , 29, 31 };
+    fit_info.compute_cov_fit(argv, jackall, lhs_aveTMOS_to_C80_to_Mphys);
+    ie = 0, ie1 = 0;
+    for (int n = 0;n < fit_info.N;n++) {
+        for (int e = 0;e < fit_info.myen.size();e++) {
+            ie1 = 0;
+            for (int n1 = 0;n1 < fit_info.N;n1++) {
+                for (int e1 = 0;e1 < fit_info.myen.size();e1++) {
+                    if (e != e1)   fit_info.cov[ie][ie1] = 0;
+                    ie1++;
+                }
+            }
+            ie++;
+        }
+    }
+    fit_info.compute_cov1_fit();
+    mysprintf(namefit, NAMESIZE, "amu_ave_bound_meff_t_a2");
+    fit_result amu_ave_linear_meff_t = fit_all_data(argv, jackall, lhs_aveTMOS_to_C80_to_Mphys, fit_info, namefit);
+    fit_info.band_range = { 0,0.0081 };
+    print_fit_band(argv, jackall, fit_info, fit_info, namefit, "afm", amu_ave_linear_meff_t, amu_ave_linear_meff_t, 0, fit_info.myen.size() - 1, 0.0005, xcont);
+    ////////////////// meff bound
+
+    fit_info.corr_id = { 26,27 , 29, 31 };
+    fit_info.compute_cov_fit(argv, jackall, lhs_aveTMOS_to_C80_to_Mphys);
+    ie = 0, ie1 = 0;
+    for (int n = 0;n < fit_info.N;n++) {
+        for (int e = 0;e < fit_info.myen.size();e++) {
+            ie1 = 0;
+            for (int n1 = 0;n1 < fit_info.N;n1++) {
+                for (int e1 = 0;e1 < fit_info.myen.size();e1++) {
+                    if (e != e1)   fit_info.cov[ie][ie1] = 0;
+                    ie1++;
+                }
+            }
+            ie++;
+        }
+    }
+    fit_info.compute_cov1_fit();
+    mysprintf(namefit, NAMESIZE, "amu_ave_bound_meff_a2");
+    fit_result amu_ave_linear_meff = fit_all_data(argv, jackall, lhs_aveTMOS_to_C80_to_Mphys, fit_info, namefit);
+    print_fit_band(argv, jackall, fit_info, fit_info, namefit, "afm", amu_ave_linear_meff, amu_ave_linear_meff, 0, fit_info.myen.size() - 1, 0.0005, xcont);
+
+
+    fit_info.restore_default();
+
 
 }
