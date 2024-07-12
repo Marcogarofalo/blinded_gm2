@@ -679,8 +679,23 @@ int main(int argc, char** argv) {
     printf("GS_to_C80= %g  %g\n", (10.0 / 9.0) * DV_to_C80[Njack - 1], (10.0 / 9.0) * myres->comp_error(DV_to_C80));
     write_jack(DV, Njack, jack_file); check_correlatro_counter(28);
     write_jack(DV_DM, Njack, jack_file); check_correlatro_counter(29);
+    fprintf(outfile, " \n\n");
+    fprintf(outfile, "#\n");
+    for (int t = 1; t < 2; t++) {
+        fprintf(outfile, "%d   1   1\t", t);
+    }
+    fprintf(outfile, "\n\n #DV_DM fit in [%d,%d] chi2=%.5g  %.5g\n", 1, 2, 0.0, 0.0);
+    fprintf(outfile, "   %.15g   %15.g\n", DV_DM[Njack - 1], error_jackboot(resampling, Njack, DV_DM));
+
     write_jack(DV_C80, Njack, jack_file); check_correlatro_counter(30);
     write_jack(DV_to_C80, Njack, jack_file); check_correlatro_counter(31);
+    fprintf(outfile, " \n\n");
+    fprintf(outfile, "#\n");
+    for (int t = 1; t < 2; t++) {
+        fprintf(outfile, "%d   1   1\t", t);
+    }
+    fprintf(outfile, "\n\n #DV_to_C80 fit in [%d,%d] chi2=%.5g  %.5g\n", 1, 2, 0.0, 0.0);
+    fprintf(outfile, "   %.15g   %15.g\n", DV_to_C80[Njack - 1], error_jackboot(resampling, Njack, DV_to_C80));
 
     //////////////////////////////////////////////////////////////
     // bounding meff_tmin
