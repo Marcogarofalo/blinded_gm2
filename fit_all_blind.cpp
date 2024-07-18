@@ -22,8 +22,9 @@
 #include "fit_all.hpp"
 #include "resampling_new.hpp"
 #include "global.hpp"
-#include "do_analysis_charm.hpp"
+// #include "do_analysis_charm.hpp"
 #include "functions_blinded_gm2.hpp"
+#include "functions_amu.hpp"
 
 #include <string>
 #include <cstring> 
@@ -180,7 +181,6 @@ int main(int argc, char** argv) {
 
     fit_type fit_info;
     fit_info.N = 2;
-    fit_info.Npar = 3;
     fit_info.Nvar = 2;
     fit_info.Njack = Njack;
     fit_info.myen = { B64, C80, D96 };
@@ -197,7 +197,6 @@ int main(int argc, char** argv) {
         }
     }
     fit_info.corr_id = { 22,23 , 29, 31 };
-    fit_info.function = rhs_two_line;
     fit_info.linear_fit = true;
     fit_info.covariancey = true;
     fit_info.verbosity = 0;
@@ -216,12 +215,39 @@ int main(int argc, char** argv) {
         }
     }
     fit_info.compute_cov1_fit();
-    mysprintf(namefit, NAMESIZE, "amu_bound_a2_GS_L_Mpi");
-    fit_result amu_linear = fit_all_data(argv, jackall, lhs_to_C80_to_Mphys, fit_info, namefit);
-    fit_info.band_range = { 0,0.0081 };
     std::vector<double> xcont = {};
-    print_fit_band(argv, jackall, fit_info, fit_info, namefit, "afm", amu_linear, amu_linear, 0, fit_info.myen.size() - 1, 0.0005, xcont);
 
+    for (int i = 0;i < 4;i++) {
+        switch (i) {
+        case 0:
+            fit_info.Npar = 3;
+            fit_info.function = rhs_two_line;
+            mysprintf(namefit, NAMESIZE, "amu_bound_a2_GS_L_Mpi");
+            break;
+        case 1:
+            fit_info.Npar = 4;
+            fit_info.function = rhs_a4TM;
+            mysprintf(namefit, NAMESIZE, "amu_bound_a2_a4TM_GS_L_Mpi");
+            break;
+        case 2:
+            fit_info.Npar = 4;
+            fit_info.function = rhs_a4OS;
+            mysprintf(namefit, NAMESIZE, "amu_bound_a2_a4OS_GS_L_Mpi");
+            break;
+        case 3:
+            fit_info.Npar = 5;
+            fit_info.function = rhs_a4;
+            mysprintf(namefit, NAMESIZE, "amu_bound_a2_a4_GS_L_Mpi");
+            break;
+
+        default:
+            break;
+        }
+
+        fit_result amu_linear = fit_all_data(argv, jackall, lhs_to_C80_to_Mphys, fit_info, namefit);
+        fit_info.band_range = { 0,0.0081 };
+        print_fit_band(argv, jackall, fit_info, fit_info, namefit, "afm", amu_linear, amu_linear, 0, fit_info.myen.size() - 1, 0.0005, xcont);
+    }
     ////////////////// meff_t bound
 
     fit_info.corr_id = { 24,25 , 29, 31 };
@@ -240,10 +266,37 @@ int main(int argc, char** argv) {
         }
     }
     fit_info.compute_cov1_fit();
-    mysprintf(namefit, NAMESIZE, "amu_bound_meff_t_a2_GS_L_Mpi");
-    fit_result amu_linear_meff_t = fit_all_data(argv, jackall, lhs_to_C80_to_Mphys, fit_info, namefit);
-    fit_info.band_range = { 0,0.0081 };
-    print_fit_band(argv, jackall, fit_info, fit_info, namefit, "afm", amu_linear_meff_t, amu_linear_meff_t, 0, fit_info.myen.size() - 1, 0.0005, xcont);
+
+    for (int i = 0;i < 4;i++) {
+        switch (i) {
+        case 0:
+            fit_info.Npar = 3;
+            fit_info.function = rhs_two_line;
+            mysprintf(namefit, NAMESIZE, "amu_bound_meff_t_a2_GS_L_Mpi");
+            break;
+        case 1:
+            fit_info.Npar = 4;
+            fit_info.function = rhs_a4TM;
+            mysprintf(namefit, NAMESIZE, "amu_bound_meff_t_a2_a4TM_GS_L_Mpi");
+            break;
+        case 2:
+            fit_info.Npar = 4;
+            fit_info.function = rhs_a4OS;
+            mysprintf(namefit, NAMESIZE, "amu_bound_meff_t_a2_a4OS_GS_L_Mpi");
+            break;
+        case 3:
+            fit_info.Npar = 5;
+            fit_info.function = rhs_a4;
+            mysprintf(namefit, NAMESIZE, "amu_bound_meff_t_a2_a4_GS_L_Mpi");
+            break;
+
+        default:
+            break;
+        }
+        fit_result amu_linear_meff_t = fit_all_data(argv, jackall, lhs_to_C80_to_Mphys, fit_info, namefit);
+        fit_info.band_range = { 0,0.0081 };
+        print_fit_band(argv, jackall, fit_info, fit_info, namefit, "afm", amu_linear_meff_t, amu_linear_meff_t, 0, fit_info.myen.size() - 1, 0.0005, xcont);
+    }
     ////////////////// meff bound
 
     fit_info.corr_id = { 26,27 , 29, 31 };
@@ -262,11 +315,36 @@ int main(int argc, char** argv) {
         }
     }
     fit_info.compute_cov1_fit();
-    mysprintf(namefit, NAMESIZE, "amu_bound_meff_a2_GS_L_Mpi");
-    fit_result amu_linear_meff = fit_all_data(argv, jackall, lhs_to_C80_to_Mphys, fit_info, namefit);
-    print_fit_band(argv, jackall, fit_info, fit_info, namefit, "afm", amu_linear_meff, amu_linear_meff, 0, fit_info.myen.size() - 1, 0.0005, xcont);
+    for (int i = 0;i < 4;i++) {
+        switch (i) {
+        case 0:
+            fit_info.Npar = 3;
+            fit_info.function = rhs_two_line;
+            mysprintf(namefit, NAMESIZE, "amu_bound_meff_a2_GS_L_Mpi");
+            break;
+        case 1:
+            fit_info.Npar = 4;
+            fit_info.function = rhs_a4TM;
+            mysprintf(namefit, NAMESIZE, "amu_bound_meff_a2_a4TM_GS_L_Mpi");
+            break;
+        case 2:
+            fit_info.Npar = 4;
+            fit_info.function = rhs_a4OS;
+            mysprintf(namefit, NAMESIZE, "amu_bound_meff_a2_a4OS_GS_L_Mpi");
+            break;
+        case 3:
+            fit_info.Npar = 5;
+            fit_info.function = rhs_a4;
+            mysprintf(namefit, NAMESIZE, "amu_bound_meff_a2_a4_GS_L_Mpi");
+            break;
 
+        default:
+            break;
+        }
+        fit_result amu_linear_meff = fit_all_data(argv, jackall, lhs_to_C80_to_Mphys, fit_info, namefit);
+        print_fit_band(argv, jackall, fit_info, fit_info, namefit, "afm", amu_linear_meff, amu_linear_meff, 0, fit_info.myen.size() - 1, 0.0005, xcont);
 
+    }
     fit_info.restore_default();
     //////////////////////////////////////////////////////////////
     // difference

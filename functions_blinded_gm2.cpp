@@ -44,6 +44,61 @@ double rhs_two_line(int n, int Nvar, double* x, int Npar, double* P) {
 
     return r;
 }
+double rhs_a4TM(int n, int Nvar, double* x, int Npar, double* P) {
+
+    double a2 = x[0];
+
+    double r = P[0];
+    switch (n) {
+    case 0:
+        r += P[1] * a2 + P[3] * a2 * a2;
+        break;
+    case 1:
+        r += P[2] * a2;
+        break;
+    default:
+        break;
+    }
+
+    return r;
+}
+double rhs_a4OS(int n, int Nvar, double* x, int Npar, double* P) {
+
+    double a2 = x[0];
+
+    double r = P[0];
+    switch (n) {
+    case 0:
+        r += P[1] * a2 ;
+        break;
+    case 1:
+        r += P[2] * a2 + P[3] * a2 * a2;
+        break;
+    default:
+        break;
+    }
+
+    return r;
+}
+double rhs_a4(int n, int Nvar, double* x, int Npar, double* P) {
+
+    double a2 = x[0];
+
+    double r = P[0];
+    switch (n) {
+    case 0:
+        r += P[1] * a2 + P[3] * a2 * a2;
+        break;
+    case 1:
+        r += P[2] * a2 + P[4] * a2 * a2;
+        break;
+    default:
+        break;
+    }
+
+    return r;
+}
+
 
 double* unblind_combo(double**** in, double* ZA, double* ZV, struct fit_type fit_info) {
     int Njack = fit_info.Njack;
@@ -78,7 +133,7 @@ double lhs_TM_m_OS(int n, int e, int j, data_all gjack, struct fit_type fit_info
 
 double lhs_TM_over_OSto_C80_to_Mphys(int n, int e, int j, data_all gjack, struct fit_type fit_info) {
     double r;
-    r =  gjack.en[e].jack[fit_info.corr_id[0]][j] + gjack.en[e].jack[fit_info.corr_id[2]][j] + gjack.en[e].jack[fit_info.corr_id[3]][j];
+    r = gjack.en[e].jack[fit_info.corr_id[0]][j] + gjack.en[e].jack[fit_info.corr_id[2]][j] + gjack.en[e].jack[fit_info.corr_id[3]][j];
     r /= gjack.en[e].jack[fit_info.corr_id[1]][j] + gjack.en[e].jack[fit_info.corr_id[2]][j] + gjack.en[e].jack[fit_info.corr_id[3]][j];
 
     return r;
@@ -86,9 +141,9 @@ double lhs_TM_over_OSto_C80_to_Mphys(int n, int e, int j, data_all gjack, struct
 
 double lhs_aveTMOS_to_C80_to_Mphys(int n, int e, int j, data_all gjack, struct fit_type fit_info) {
     double r;
-    r =  gjack.en[e].jack[fit_info.corr_id[0]][j] + gjack.en[e].jack[fit_info.corr_id[2]][j] + gjack.en[e].jack[fit_info.corr_id[3]][j];
+    r = gjack.en[e].jack[fit_info.corr_id[0]][j] + gjack.en[e].jack[fit_info.corr_id[2]][j] + gjack.en[e].jack[fit_info.corr_id[3]][j];
     r += gjack.en[e].jack[fit_info.corr_id[1]][j] + gjack.en[e].jack[fit_info.corr_id[2]][j] + gjack.en[e].jack[fit_info.corr_id[3]][j];
-    r/=2;
+    r /= 2;
 
     return r;
 }

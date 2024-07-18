@@ -16,4 +16,8 @@ double lhs_TM_over_OSto_C80_to_Mphys(int n, int e, int j, data_all gjack, struct
 
 double rhs_line(int n, int Nvar, double* x, int Npar, double* P);
 double lhs_aveTMOS_to_C80_to_Mphys(int n, int e, int j, data_all gjack, struct fit_type fit_info);
+
+double rhs_a4TM(int n, int Nvar, double* x, int Npar, double* P);
+double rhs_a4OS(int n, int Nvar, double* x, int Npar, double* P);
+double rhs_a4(int n, int Nvar, double* x, int Npar, double* P);
 #endif
