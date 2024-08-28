@@ -918,4 +918,18 @@ int main(int argc, char** argv) {
         fprintf(outfile, "\n\n #amu_treesub_{bound_meff}_(OS)_ave_eigen fit in [%d,%d] chi2=%.5g  %.5g\n", 1, 1, 0.0, 0.0);
         fprintf(outfile, "   %.15g   %15.g\n", amu_OS_bound_meff_ave[Njack - 1], myres->comp_error(amu_OS_bound_meff_ave));
     }
+
+    fprintf(outfile, " \n\n#\n%d   %.15g   %.15g %d   %.15g   %.15g", 0, 0.0, 0.0, 0, 0.0, 0.0);
+    fprintf(outfile, "\n\n #aMpi fit in [%d,%d] chi2=%.5g  %.5g\n", 1, 1, 0.0, 0.0);
+    fprintf(outfile, "   %.15g   %15.g\n", Mpi[Njack - 1], myres->comp_error(Mpi));
+
+
+    fprintf(outfile, " \n\n#\n%d   %.15g   %.15g %d   %.15g   %.15g", 0, 0.0, 0.0, 0, 0.0, 0.0);
+    fprintf(outfile, "\n\n #a_fm fit in [%d,%d] chi2=%.5g  %.5g\n", 1, 1, 0.0, 0.0);
+    fprintf(outfile, "   %.15g   %15.g\n", a_fm[Njack - 1], myres->comp_error(a_fm));
+
+    fprintf(outfile, " \n\n#\n%d   %.15g   %.15g %d   %.15g   %.15g", 0, 0.0, 0.0, 0, 0.0, 0.0);
+    fprintf(outfile, "\n\n #L_a fit in [%d,%d] chi2=%.5g  %.5g\n", 1, 1, 0.0, 0.0);
+    fprintf(outfile, "   %.d   %15.g\n", head.L, 0.0);
+
 }
