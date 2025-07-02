@@ -60,3 +60,8 @@ add_executable(fit_all_blind fit_all_blind.cpp)
 target_link_libraries(fit_all_blind PUBLIC functions_blinded_gm2)
 target_link_libraries(blinded_gm2 PUBLIC ${ANALYSIS_PROGRAM_LIBRARIES})
 
+add_executable(rew_gm2 rew_gm2.cpp)
+target_link_libraries(rew_gm2 PUBLIC functions_blinded_gm2)
+target_link_libraries(rew_gm2 PUBLIC ${ANALYSIS_PROGRAM_LIBRARIES})
+
+

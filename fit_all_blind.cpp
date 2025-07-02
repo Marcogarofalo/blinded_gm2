@@ -65,6 +65,8 @@ enum enum_ensembles_blind_gm2 {
 
 
 // }
+constexpr double Mpi_MeV = 135;
+constexpr double Mpi_MeV_err = 0.2;
 
 
 double read_single_Nobs(FILE* stream, int header_size, int Njack) {
